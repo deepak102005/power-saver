@@ -53,138 +53,84 @@ graph TD
 - **AI Integration:** Google Generative AI (`@google/generative-ai`)
 
 ## 🚀 Prompts & Commands Used
-Build a full-stack, working website for PowerSaver AI — a gamified energy-saving platform for college students. Stack: React.js (frontend), Node.js/Express (backend API), MongoDB (database), plus an AI recommendation engine (calls an LLM API for personalized tips). Light theme, clean and modern, mobile-responsive.
+### 📝 Original Project Prompt
+> Build a full-stack, working website for PowerSaver AI — a gamified energy-saving platform for college students. Stack: React.js (frontend), Node.js/Express (backend API), PostgreSQL (database), plus an AI recommendation engine (calls an LLM API for personalized tips). Light theme, clean and modern, mobile-responsive.
 
-Core user flow
+#### Core User Flow
+- Student signs up / logs in
+- Their power usage streams into a dashboard in real time
+- AI engine analyzes usage patterns and generates personalized saving tips
+- Student earns coins for hitting savings milestones and maintaining daily streaks
+- Coins and streaks are ranked on a live leaderboard against other students/dorms
 
+#### Pages & Functionality
+**1. Landing Page**
+- Hero section: headline, subheadline, CTA buttons (Sign up / Log in)
+- Animated impact counter (total kWh saved across all users)
+- "How it works" — 3-step explainer with icons
+- Testimonial/social proof section & Footer with links
 
-Student signs up / logs in
-Their power usage (simulated or device-fed) streams into a dashboard in real time
-AI engine analyzes usage patterns and generates personalized saving tips
-Student earns coins for hitting savings milestones and maintaining daily streaks
-Coins and streaks are ranked on a live leaderboard against other students/dorms
+**2. Auth (Sign up / Log in)**
+- Email + password auth (bcrypt hashing, JWT sessions)
+- Fields at signup: name, email, password, college/dorm (for leaderboard grouping)
+- Protected routes redirect unauthenticated users to login
 
+**3. Dashboard (Main App)**
+- Real-time power usage chart (line/area chart, last 24h and last 7 days toggle)
+- Current streak counter with flame icon, animates on increment
+- Coin balance, prominently displayed in navbar
+- "Today's AI recommendation" card — pulls from the AI engine, refreshes daily
+- Quick-glance stats: this week's savings vs last week, rank change
 
-Pages & functionality
+**4. Leaderboard**
+- Tabs: Individual / By dorm-college
+- Ranked list: avatar, name, coin total, streak badge
+- Current user's row highlighted and auto-scrolled into view
+- Filter by time period: this week / this month / all-time
 
-1. Landing page
+**5. Rewards / Milestones**
+- Grid of milestone cards (e.g. "Save 10 kWh this week", "7-day streak")
+- Progress bar per milestone, coin value shown
+- Locked vs unlocked celebratory states
+- Claim animation when a milestone is completed
 
+**6. AI Recommendations Panel**
+- List of personalized tips with descriptions, estimated savings, and a "mark as done" action
+- Tips generated server-side by calling an LLM with the user's recent usage data
 
-Hero section: headline, subheadline, CTA buttons (Sign up / Log in)
-Animated impact counter (total kWh saved across all users — pulled live from DB)
-"How it works" — 3-step explainer with icons
-Testimonial/social proof section
-Footer with links
+**7. Profile / Settings**
+- Edit name, dorm/college, avatar & Notification preferences
+- Logout
 
+#### Data Model & API Endpoints
+**Database Tables:**
+- `users`: id, name, email, password_hash, dorm, coins, current_streak, longest_streak, created_at
+- `usage_readings`: id, user_id, kwh, timestamp
+- `milestones`: id, title, description, target_type, target_value, coin_reward
+- `user_milestones`: id, user_id, milestone_id, progress, completed_at
+- `recommendations`: id, user_id, text, estimated_savings_kwh, status, created_at
+- `leaderboard_cache`: id, period, entries (JSON), updated_at
 
-2. Auth (sign up / log in)
+**Express Routes:**
+- `POST /api/auth/signup` & `POST /api/auth/login`
+- `GET /api/users/me`
+- `GET /api/usage/:userId?range=24h|7d`
+- `POST /api/usage/ingest`
+- `GET /api/leaderboard?period=week|month|all`
+- `GET /api/milestones/:userId`
+- `GET /api/recommendations/:userId` & `POST /api/recommendations/generate`
+- `POST /api/streaks/checkin`
 
+#### Gamification & AI Engine
+- **Streaks:** Increment `current_streak` if usage is below average; reset to 0 on a missed day.
+- **Coins:** Awarded on milestone completion and streak checkpoints.
+- **Leaderboard:** Recompute ranks on a schedule via cron job.
+- **AI Engine:** Backend service sends the last 7 days of usage + dorm context to an LLM, prompting for 1-3 concrete tips in JSON format.
 
-Email + password auth (bcrypt hashing, JWT sessions)
-Fields at signup: name, email, password, college/dorm (for leaderboard grouping)
-Protected routes redirect unauthenticated users to login
-
-
-3. Dashboard (main app, protected route)
-
-
-Real-time power usage chart (line/area chart, last 24h and last 7 days toggle)
-Current streak counter with flame icon, animates on increment
-Coin balance, prominently displayed in navbar
-"Today's AI recommendation" card — pulls from the AI engine, refreshes daily
-Quick-glance stats: this week's savings vs last week, rank change
-
-
-4. Leaderboard
-
-
-Tabs: Individual / By dorm-college
-Ranked list: avatar, name, coin total, streak badge
-Current user's row highlighted and auto-scrolled into view
-Filter by time period: this week / this month / all-time
-
-
-5. Rewards / milestones
-
-
-Grid of milestone cards (e.g. "Save 10 kWh this week", "7-day streak", "Top 10 leaderboard")
-Progress bar per milestone, coin value shown
-Locked (grayed) vs unlocked (colored, celebratory) states
-Claim animation when a milestone is completed
-
-
-6. AI recommendations panel
-
-
-List of personalized tips, each with: description, estimated coin/kWh savings, "mark as done" action
-Tips generated server-side by calling an LLM with the user's recent usage data as context
-
-
-7. Profile / settings
-
-
-Edit name, dorm/college, avatar
-Notification preferences
-Logout
-
-
-Data model (MongoDB collections)
-
-users: { _id, name, email, passwordHash, dorm, coins, currentStreak, longestStreak, createdAt }
-usageReadings: { _id, userId, kwh, timestamp }
-milestones: { _id, title, description, targetType, targetValue, coinReward }
-userMilestones: { _id, userId, milestoneId, progress, completedAt }
-recommendations: { _id, userId, text, estimatedSavingsKwh, status, createdAt }
-leaderboardCache: { _id, period, entries: [{ userId, coins, streak, rank }], updatedAt }
-
-API endpoints (Express)
-
-POST   /api/auth/signup
-POST   /api/auth/login
-GET    /api/users/me
-GET    /api/usage/:userId?range=24h|7d
-POST   /api/usage/ingest          (device/simulator posts new readings)
-GET    /api/leaderboard?period=week|month|all
-GET    /api/milestones/:userId
-GET    /api/recommendations/:userId
-POST   /api/recommendations/generate   (triggers AI engine call)
-POST   /api/streaks/checkin
-
-Gamification logic (implement as backend services)
-
-
-Streaks: increment currentStreak if the user logs a saving day (usage below their rolling average) on consecutive calendar days; reset to 0 on a missed day; update longestStreak accordingly
-Coins: awarded on milestone completion (from milestones.coinReward) and on streak checkpoints (e.g. +5 coins every 3-day streak)
-Leaderboard: recompute ranks on a schedule (e.g. every 15 min via a cron job) into leaderboardCache rather than computing live on every request
-
-
-AI recommendation engine
-
-
-Backend service that, on a schedule or on-demand, sends the user's last 7 days of usageReadings plus their dorm/college context to an LLM (Claude API)
-Prompt the model to return 1-3 concrete, actionable tips in JSON: { tips: [{ text, estimatedSavingsKwh }] }
-Store results in recommendations; surface the newest on the dashboard
-
-
-Design system (light theme)
-
-
-Background: soft off-white (#FAFAF8), card surfaces white with subtle shadow
-Primary: green (#22A06B range) for eco/savings actions and success states
-Accent: warm amber (#F5A623 range) for coins, rewards, and streak fire
-Typography: clean sans-serif (Inter or similar), generous line-height
-Cards: 12-16px border radius, soft shadows, no harsh borders
-Micro-animations: coin reveal on reward claim, flame pulse on streak increment, number count-up on stat changes
-Fully responsive — mobile-first, since students primarily check this on phones
-
-
-Tech implementation notes
-
-
-Frontend: React (functional components, hooks), React Router, Tailwind CSS, Recharts or Chart.js for graphs, Axios for API calls
-Backend: Node.js + Express, Mongoose for MongoDB, JWT auth middleware, node-cron for scheduled jobs (leaderboard recompute, streak checks)
-Real-time updates: WebSocket (Socket.io) or polling every 30s for the dashboard's live usage chart
-Deploy-ready: environment variables for DB connection string, JWT secret, and LLM API key.
+#### Design System & Tech Specs
+- **Theme:** Soft off-white background, white cards with subtle shadows. Primary Green for eco-actions, Accent Amber for coins/streaks. Clean sans-serif typography.
+- **Micro-animations:** Coin reveal on claims, flame pulse on streaks, number count-up.
+- **Stack:** React, Tailwind CSS, Recharts, Node.js + Express, PostgreSQL, JWT auth. Deploy-ready via env variables.
 ### Initialization & Setup
 ```bash
 # Frontend Setup
